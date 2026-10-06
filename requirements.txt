@@ -1,0 +1,12 @@
+# Web framework and server
+fastapi
+uvicorn[standard]
+
+# Database driver (psycopg 3, with prebuilt binary and connection pool)
+psycopg[binary,pool]
+
+# Reading the .env file
+python-dotenv
+
+# Seed data generation
+Faker

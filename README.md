@@ -84,7 +84,6 @@ If `venv/` or `.env` appears in the list, **stop and tell the team**. Do not com
 sql/        schema, views, seed data and the query catalogue
 app/        FastAPI app (db connection, routers, Pydantic schemas)
 scripts/    seed generators and the database setup script
-tests/      pytest test cases
 docs/       project documentation sections
 ```
 
