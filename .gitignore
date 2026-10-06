@@ -1,0 +1,40 @@
+# DO NOT CHANGE THIS 
+
+# Virtual environments (everyone's own copy stays local)
+venv/
+.venv/
+env/
+
+# Environment variables / secrets (never commit the real .env)
+.env
+.env.*
+!.env.example
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Test and tool caches
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Packaging / build output
+*.egg-info/
+build/
+dist/
+
+# Editor and IDE folders
+.vscode/
+.idea/
+
+# OS junk files
+.DS_Store
+Thumbs.db
+
+# Logs and temporary files
+*.log
+*.tmp
