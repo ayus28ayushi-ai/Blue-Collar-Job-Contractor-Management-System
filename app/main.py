@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Depends
 from contextlib import asynccontextmanager
 from app.database.db import get_connection, create_pool
+from app.routers import applications , jobs
 
 # initialising and closing database connections as the app starts and stops
 @asynccontextmanager
@@ -14,6 +15,9 @@ app = FastAPI(
     description="ADD SOMETHING",
     lifespan=lifespan
 )
+
+app.include_router(jobs.router)
+app.include_router(applications.router)
 
 # simple check endpoint to verify db connectivity
 @app.get("/systemcheck", tags=["System"])
