@@ -1,0 +1,39 @@
+from typing import Any
+from fastapi import APIRouter, HTTPException, status, Depends
+from pydantic import BaseModel, Field
+from app.database import get_db
+from app.errors import raise_http_from_db
+
+router = APIRouter(prefix="/skills", tags=["Skills"])
+
+
+class SkillCreate(BaseModel):
+    skill_name: str = Field(..., min_length=1, max_length=60)
+
+
+@router.post("", status_code=status.HTTP_201_CREATED)
+async def create_skill(payload: SkillCreate, conn: Any = Depends(get_db)):
+    try:
+        row = await conn.fetchrow(
+            "INSERT INTO skill (skill_name) VALUES ($1) RETURNING skill_id, skill_name;",
+            payload.skill_name,
+        )
+        return dict(row)
+    except Exception as e:
+        raise_http_from_db(e, unique_msg="Skill name already exists")
+
+
+@router.get("")
+async def list_skills(conn: Any = Depends(get_db)):
+    rows = await conn.fetch("SELECT skill_id, skill_name FROM skill ORDER BY skill_name;")
+    return [dict(r) for r in rows]
+
+
+@router.get("/{skill_id}")
+async def get_skill(skill_id: int, conn: Any = Depends(get_db)):
+    row = await conn.fetchrow(
+        "SELECT skill_id, skill_name FROM skill WHERE skill_id = $1;", skill_id
+    )
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Skill not found")
+    return dict(row)
