@@ -2,7 +2,7 @@ from typing import Any, Optional
 from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel, Field
 import asyncpg
-from app.database import get_db
+from app.database.db import get_connection
 
 router = APIRouter(prefix="/ratings", tags=["Ratings"])
 
@@ -14,7 +14,7 @@ class RatingCreate(BaseModel):
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=None)
 async def create_rating(
     payload: RatingCreate,
-    conn: Any = Depends(get_db)
+    conn: Any = Depends(get_connection)
 ):
     # 1. Check if application exists and verify its job is completed
     app_data = await conn.fetchrow(

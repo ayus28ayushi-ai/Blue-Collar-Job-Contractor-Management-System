@@ -1,7 +1,7 @@
 from typing import Any
 from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel, Field
-from app.database import get_db
+from app.database.db import get_connection
 from app.errors import raise_http_from_db
 
 router = APIRouter(prefix="/skills", tags=["Skills"])
@@ -12,7 +12,7 @@ class SkillCreate(BaseModel):
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
-async def create_skill(payload: SkillCreate, conn: Any = Depends(get_db)):
+async def create_skill(payload: SkillCreate, conn: Any = Depends(get_connection)):
     try:
         row = await conn.fetchrow(
             "INSERT INTO skill (skill_name) VALUES ($1) RETURNING skill_id, skill_name;",
@@ -24,13 +24,13 @@ async def create_skill(payload: SkillCreate, conn: Any = Depends(get_db)):
 
 
 @router.get("")
-async def list_skills(conn: Any = Depends(get_db)):
+async def list_skills(conn: Any = Depends(get_connection)):
     rows = await conn.fetch("SELECT skill_id, skill_name FROM skill ORDER BY skill_name;")
     return [dict(r) for r in rows]
 
 
 @router.get("/{skill_id}")
-async def get_skill(skill_id: int, conn: Any = Depends(get_db)):
+async def get_skill(skill_id: int, conn: Any = Depends(get_connection)):
     row = await conn.fetchrow(
         "SELECT skill_id, skill_name FROM skill WHERE skill_id = $1;", skill_id
     )

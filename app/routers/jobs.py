@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from app.database.db import get_connection, as_dicts, as_dict
 from app.schemas.job_schema import JobCreate, JobUpdate
-from app.database import get_db
 from typing import Any
 
 router = APIRouter(prefix="/jobs", tags=["Jobs"])
@@ -102,11 +101,11 @@ async def delete_job(job_id: int, conn=Depends(get_connection)):
     return {"deleted": job_id}      # 400 if applications exist (the database blocks it: RESTRICT)
 
 @router.get("/{job_id}/matching-workers")
-async def matching_workers(job_id: int, conn: Any = Depends(get_db)):
+async def matching_workers(job_id: int, conn: Any = Depends(get_connection)):
     """Workers who have ALL skills required by the job (Q7)."""
     job = await conn.fetchrow("SELECT job_id FROM job WHERE job_id = $1;", job_id)
     if not job:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+        raise HTTPException(404, "Job not found")
 
     rows = await conn.fetch(
         """

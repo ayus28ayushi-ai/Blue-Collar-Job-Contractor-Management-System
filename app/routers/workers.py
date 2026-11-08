@@ -2,7 +2,7 @@ from typing import Any, Optional
 from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel, Field
 import asyncpg
-from app.database import get_db
+from app.database.db import get_connection
 from app.errors import raise_http_from_db
 
 router = APIRouter(prefix="/workers", tags=["Workers"])
@@ -35,7 +35,7 @@ class WorkerSkillCreate(BaseModel):
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
-async def create_worker(payload: WorkerCreate, conn: Any = Depends(get_db)):
+async def create_worker(payload: WorkerCreate, conn: Any = Depends(get_connection)):
     try:
         row = await conn.fetchrow(
             """
@@ -54,7 +54,7 @@ async def create_worker(payload: WorkerCreate, conn: Any = Depends(get_db)):
 
 
 @router.get("")
-async def list_workers(conn: Any = Depends(get_db)):
+async def list_workers(conn: Any = Depends(get_connection)):
     rows = await conn.fetch(
         """
         SELECT worker_id, full_name, phone, email, city,
@@ -66,7 +66,7 @@ async def list_workers(conn: Any = Depends(get_db)):
 
 
 @router.get("/{worker_id}")
-async def get_worker(worker_id: int, conn: Any = Depends(get_db)):
+async def get_worker(worker_id: int, conn: Any = Depends(get_connection)):
     row = await conn.fetchrow(
         """
         SELECT worker_id, full_name, phone, email, city,
@@ -81,7 +81,7 @@ async def get_worker(worker_id: int, conn: Any = Depends(get_db)):
 
 
 @router.put("/{worker_id}")
-async def update_worker(worker_id: int, payload: WorkerUpdate, conn: Any = Depends(get_db)):
+async def update_worker(worker_id: int, payload: WorkerUpdate, conn: Any = Depends(get_connection)):
     existing = await conn.fetchrow("SELECT worker_id FROM worker WHERE worker_id = $1;", worker_id)
     if not existing:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Worker not found")
@@ -111,7 +111,7 @@ async def update_worker(worker_id: int, payload: WorkerUpdate, conn: Any = Depen
 
 
 @router.delete("/{worker_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_worker(worker_id: int, conn: Any = Depends(get_db)):
+async def delete_worker(worker_id: int, conn: Any = Depends(get_connection)):
     existing = await conn.fetchrow("SELECT worker_id FROM worker WHERE worker_id = $1;", worker_id)
     if not existing:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Worker not found")
@@ -123,7 +123,7 @@ async def delete_worker(worker_id: int, conn: Any = Depends(get_db)):
 
 @router.post("/{worker_id}/skills", status_code=status.HTTP_201_CREATED)
 async def add_skill_to_worker(
-    worker_id: int, payload: WorkerSkillCreate, conn: Any = Depends(get_db)
+    worker_id: int, payload: WorkerSkillCreate, conn: Any = Depends(get_connection)
 ):
     worker = await conn.fetchrow("SELECT worker_id FROM worker WHERE worker_id = $1;", worker_id)
     if not worker:
@@ -148,7 +148,7 @@ async def add_skill_to_worker(
 
 
 @router.get("/{worker_id}/skills")
-async def list_worker_skills(worker_id: int, conn: Any = Depends(get_db)):
+async def list_worker_skills(worker_id: int, conn: Any = Depends(get_connection)):
     worker = await conn.fetchrow("SELECT worker_id FROM worker WHERE worker_id = $1;", worker_id)
     if not worker:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Worker not found")
