@@ -55,7 +55,38 @@ async def search_jobs(skill: str | None = None, location: str | None = None,
         WHERE {' AND '.join(where)}
         ORDER BY j.pay_amount DESC, j.job_id"""
     return as_dicts(await conn.fetch(sql, *params))
+<<<<<<< HEAD
 
+=======
+                          
+# end point to get matching workers for a job
+@router.get("/{job_id}/matching-workers")
+async def matching_workers(job_id: int, conn=Depends(get_connection)):
+    """Workers who have ALL skills required by the job (Q7)."""
+    job = await conn.fetchrow(
+        "SELECT job_id FROM job WHERE job_id = $1;", job_id
+    )
+    if not job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
+        )
+
+    rows = await conn.fetch(
+        """
+        SELECT w.worker_id, w.full_name, w.city
+        FROM worker w
+        JOIN worker_skill ws ON ws.worker_id = w.worker_id
+        WHERE ws.skill_id IN (SELECT skill_id FROM job_skill WHERE job_id = $1)
+        GROUP BY w.worker_id, w.full_name, w.city
+        HAVING COUNT(DISTINCT ws.skill_id) = (
+            SELECT COUNT(*) FROM job_skill WHERE job_id = $1
+        )
+        ORDER BY w.worker_id;
+        """,
+        job_id,
+    )
+    return as_dicts(rows)
+>>>>>>> origin/sri
 
 # endpoint to get teh job by its id
 @router.get("/{job_id}")
@@ -97,4 +128,8 @@ async def delete_job(job_id: int, conn=Depends(get_connection)):
     deleted = await conn.fetchval("DELETE FROM job WHERE job_id=$1 RETURNING job_id", job_id)
     if deleted is None:
         raise HTTPException(404, "Job not found")
+<<<<<<< HEAD
     return {"deleted": job_id}      # 400 if applications exist (the database blocks it: RESTRICT)
+=======
+    return {"deleted": job_id}      # 400 if applications exist (the database blocks it: RESTRICT)
+>>>>>>> origin/sri
