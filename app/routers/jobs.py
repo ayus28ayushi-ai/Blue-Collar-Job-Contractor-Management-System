@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from app.database.db import get_connection, as_dicts, as_dict
-from app.schemas.job_schema import JobCreate, JobUpdate
+from app.schemas.job_schema import JobCreate, JobUpdate, JobStatusUpdate
 from typing import Any
 from app.security import require_role
 
@@ -47,6 +47,97 @@ async def create_job(
     )
 
     return as_dict(row)
+
+@router.patch("/{job_id}/status")
+async def update_job_status(
+    job_id: int,
+    body: JobStatusUpdate,
+    conn=Depends(get_connection),
+    current_user=Depends(require_role("contractor"))
+):
+    contractor_id = await conn.fetchval(
+        "SELECT contractor_id FROM contractor WHERE user_id = $1",
+        current_user["user_id"]
+    )
+
+    if contractor_id is None:
+        raise HTTPException(404, "Contractor profile not found")
+
+    async with conn.transaction():
+
+        job = await conn.fetchrow(
+            """
+            SELECT status
+            FROM job
+            WHERE job_id = $1 AND contractor_id = $2
+            FOR UPDATE
+            """,
+            job_id, contractor_id
+        )
+
+        if not job:
+            raise HTTPException(404, "Job not found or not owned by you")
+
+        accepted_count = await conn.fetchval(
+            """
+            SELECT COUNT(*)
+            FROM application
+            WHERE job_id = $1 AND status = 'accepted'
+            """,
+            job_id
+        )
+
+        if accepted_count == 0:
+            raise HTTPException(
+                400,
+                "At least one worker must be accepted before starting or completing the job"
+            )
+
+        if body.status == "in_progress":
+            if job["status"] != "open":
+                raise HTTPException(
+                    400,
+                    "Only open jobs can be moved to in_progress"
+                )
+
+        elif body.status == "completed":
+            if job["status"] != "in_progress":
+                raise HTTPException(
+                    400,
+                    "Only in-progress jobs can be completed"
+                )
+
+        updated_job = await conn.fetchrow(
+            """
+            UPDATE job
+            SET status = $1
+            WHERE job_id = $2
+            RETURNING job_id, status
+            """,
+            body.status, job_id
+        )
+
+        completed_applications = 0
+
+        if body.status == "completed":
+            completed_applications = await conn.fetchval(
+                """
+                WITH updated AS (
+                    UPDATE application
+                    SET status = 'completed'
+                    WHERE job_id = $1 AND status = 'accepted'
+                    RETURNING application_id
+                )
+                SELECT COUNT(*) FROM updated
+                """,
+                job_id
+            )
+
+    return {
+        "message": f"Job marked as {body.status}",
+        "job": dict(updated_job),
+        "completed_applications": completed_applications
+    }
 
 
 # router to search jobs

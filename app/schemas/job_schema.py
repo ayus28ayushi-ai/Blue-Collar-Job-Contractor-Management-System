@@ -24,3 +24,6 @@ class JobUpdate(BaseModel):
     workers_needed: int = Field(1, gt=0)
     start_date: date
     end_date: date
+
+class JobStatusUpdate(BaseModel):
+    status: Literal["in_progress", "completed"]
