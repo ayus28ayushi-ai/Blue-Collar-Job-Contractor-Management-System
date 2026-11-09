@@ -1,15 +1,12 @@
-from typing import Any, Optional
+from typing import Any
 from fastapi import APIRouter, HTTPException, status, Depends
-from pydantic import BaseModel, Field
 import asyncpg
 from app.database.db import get_connection
+from app.schemas.rating_schema import RatingCreate
 
 router = APIRouter(prefix="/ratings", tags=["Ratings"])
 
-class RatingCreate(BaseModel):
-    application_id: int
-    score: int = Field(..., ge=1, le=5, description="Score must be between 1 and 5")
-    comment: Optional[str] = None
+
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=None)
 async def create_rating(

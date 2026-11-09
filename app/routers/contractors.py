@@ -1,20 +1,10 @@
 import asyncpg
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
-
 from app.database.db import get_connection, as_dict, as_dicts
 from app.database.errors import raise_http_error
+from app.schemas.contractor_schema import ContractorIn
 
 router = APIRouter(prefix="/contractors", tags=["Contractors"])
-
-
-class ContractorIn(BaseModel):
-    company_name: str = Field(min_length=1, max_length=100)
-    contact_person: str = Field(min_length=1, max_length=100)
-    phone: str = Field(min_length=1, max_length=15)
-    email: str = Field(min_length=3, max_length=100)
-    city: str = Field(min_length=1, max_length=60)
-
 
 @router.post("/", status_code=201)
 async def create_contractor(data: ContractorIn, con=Depends(get_connection)):

@@ -1,14 +1,10 @@
 from typing import Any
 from fastapi import APIRouter, HTTPException, status, Depends
-from pydantic import BaseModel, Field
 from app.database.db import get_connection
 from app.errors import raise_http_from_db
+from app.schemas.skill_schema import SkillCreate
 
 router = APIRouter(prefix="/skills", tags=["Skills"])
-
-
-class SkillCreate(BaseModel):
-    skill_name: str = Field(..., min_length=1, max_length=60)
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)

@@ -1,26 +1,15 @@
-
-from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from pydantic import BaseModel, Field
-
 from app.database.db import get_connection
 from app.security import (
     hash_password,
     verify_password,
     create_access_token
 )
+from app.schemas.auth_schema import UserRegister
 
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
-
-
-# Registration request model
-class UserRegister(BaseModel):
-    email: str = Field(min_length=5, max_length=255)
-    password: str = Field(min_length=8)
-    role: Literal["worker", "contractor"]
-
 
 # Register a new user
 @router.post("/register", status_code=status.HTTP_201_CREATED)
