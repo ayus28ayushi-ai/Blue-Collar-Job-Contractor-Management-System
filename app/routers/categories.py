@@ -3,11 +3,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.database.db import get_connection, as_dict, as_dicts
 from app.database.errors import raise_http_error
 from app.schemas.categories_schema import CategoryIn
+from app.security import require_role
 
 router = APIRouter(prefix="/categories", tags=["Job Categories"])
 
 @router.post("/", status_code=201)
-async def create_category(data: CategoryIn, con=Depends(get_connection)):
+async def create_category(data: CategoryIn, con=Depends(get_connection), current_user=Depends(require_role("admin"))):
     try:
         row = await con.fetchrow(
             "INSERT INTO job_category (category_name) VALUES ($1) RETURNING *",
@@ -33,7 +34,7 @@ async def get_category(category_id: int, con=Depends(get_connection)):
 
 
 @router.put("/{category_id}")
-async def update_category(category_id: int, data: CategoryIn, con=Depends(get_connection)):
+async def update_category(category_id: int, data: CategoryIn, con=Depends(get_connection), current_user=Depends(require_role("admin"))):
     try:
         row = await con.fetchrow(
             "UPDATE job_category SET category_name = $1 WHERE category_id = $2 RETURNING *",
@@ -47,7 +48,7 @@ async def update_category(category_id: int, data: CategoryIn, con=Depends(get_co
 
 
 @router.delete("/{category_id}", status_code=204)
-async def delete_category(category_id: int, con=Depends(get_connection)):
+async def delete_category(category_id: int, con=Depends(get_connection),current_user=Depends(require_role("admin"))):
     try:
         result = await con.execute("DELETE FROM job_category WHERE category_id = $1", category_id)
     except asyncpg.PostgresError as e:

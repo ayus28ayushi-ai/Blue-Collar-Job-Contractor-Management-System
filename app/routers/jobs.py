@@ -3,6 +3,7 @@ from app.database.db import get_connection, as_dicts, as_dict
 from app.schemas.job_schema import JobCreate, JobUpdate, JobStatusUpdate
 from typing import Any
 from app.security import require_role
+from app.errors import raise_http_from_db
 
 router = APIRouter(prefix="/jobs", tags=["Jobs"])
 
@@ -247,6 +248,8 @@ async def update_job(
 
 
 # endpoint to delete a job
+
+# Only the contractor who owns the job can delete it
 @router.delete("/{job_id}")
 async def delete_job(
     job_id: int,
@@ -261,23 +264,48 @@ async def delete_job(
     if contractor_id is None:
         raise HTTPException(404, "Contractor profile not found")
 
-    deleted = await conn.fetchval(
+    # Check whether the job exists and belongs to this contractor
+    job = await conn.fetchrow(
         """
-        DELETE FROM job
-        WHERE job_id=$1 AND contractor_id=$2
-        RETURNING job_id
+        SELECT job_id FROM job
+        WHERE job_id = $1 AND contractor_id = $2
         """,
         job_id, contractor_id
     )
 
-    if deleted is None:
+    if not job:
         raise HTTPException(
             404,
             "Job not found or you do not own this job"
         )
 
-    return {"deleted": deleted}
-    # 400 if applications exist (the database blocks it: RESTRICT)
+    # Prevent deletion if applications already exist
+    application = await conn.fetchrow(
+        """
+        SELECT application_id
+        FROM application
+        WHERE job_id = $1
+        LIMIT 1
+        """,
+        job_id
+    )
+
+    if application:
+        raise HTTPException(
+            409,
+            "Cannot delete this job because it has existing applications."
+        )
+
+    try:
+        await conn.execute(
+            "DELETE FROM job WHERE job_id = $1",
+            job_id
+        )
+    except Exception as e:
+        raise_http_from_db(e)
+
+    return {"message": "Job deleted successfully"}
+
 
 @router.get("/{job_id}/matching-workers")
 async def matching_workers(job_id: int, conn: Any = Depends(get_connection)):
