@@ -3,7 +3,6 @@ from datetime import date
 from typing import Literal
 
 # Pydantic request model for job creation
-
 class JobCreate(BaseModel):
     category_id: int
     title: str = Field(min_length=3, max_length=120)

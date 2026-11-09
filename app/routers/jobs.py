@@ -110,26 +110,83 @@ async def get_job(job_id: int, conn=Depends(get_connection)):
 
 
 # endpoint to update the job
+
 @router.put("/{job_id}")
-async def update_job(job_id: int, j: JobUpdate, conn=Depends(get_connection)):
+async def update_job(
+    job_id: int,
+    j: JobUpdate,
+    conn=Depends(get_connection),
+    current_user=Depends(require_role("contractor"))
+):
+    contractor_id = await conn.fetchval(
+        "SELECT contractor_id FROM contractor WHERE user_id = $1",
+        current_user["user_id"]
+    )
+
+    if contractor_id is None:
+        raise HTTPException(404, "Contractor profile not found")
+
     row = await conn.fetchrow(
-        """UPDATE job SET title=$1, description=$2, location=$3, pay_amount=$4,
-                          workers_needed=$5, start_date=$6, end_date=$7
-           WHERE job_id=$8 AND status = 'open' RETURNING *""",
-        j.title, j.description, j.location, j.pay_amount, j.workers_needed,
-        j.start_date, j.end_date, job_id)
-    
+        """
+        UPDATE job
+        SET title=$1,
+            description=$2,
+            location=$3,
+            pay_amount=$4,
+            workers_needed=$5,
+            start_date=$6,
+            end_date=$7
+        WHERE job_id=$8
+          AND contractor_id=$9
+          AND status='open'
+        RETURNING *
+        """,
+        j.title, j.description, j.location, j.pay_amount,
+        j.workers_needed, j.start_date, j.end_date,
+        job_id, contractor_id
+    )
+
     if not row:
-        raise HTTPException(404, "Open job not found (only open jobs can be edited)")
+        raise HTTPException(
+            404,
+            "Job not found, not owned by you, or not open"
+        )
+
     return as_dict(row)
+
 
 # endpoint to delete a job
 @router.delete("/{job_id}")
-async def delete_job(job_id: int, conn=Depends(get_connection)):
-    deleted = await conn.fetchval("DELETE FROM job WHERE job_id=$1 RETURNING job_id", job_id)
+async def delete_job(
+    job_id: int,
+    conn=Depends(get_connection),
+    current_user=Depends(require_role("contractor"))
+):
+    contractor_id = await conn.fetchval(
+        "SELECT contractor_id FROM contractor WHERE user_id = $1",
+        current_user["user_id"]
+    )
+
+    if contractor_id is None:
+        raise HTTPException(404, "Contractor profile not found")
+
+    deleted = await conn.fetchval(
+        """
+        DELETE FROM job
+        WHERE job_id=$1 AND contractor_id=$2
+        RETURNING job_id
+        """,
+        job_id, contractor_id
+    )
+
     if deleted is None:
-        raise HTTPException(404, "Job not found")
-    return {"deleted": job_id}      # 400 if applications exist (the database blocks it: RESTRICT)
+        raise HTTPException(
+            404,
+            "Job not found or you do not own this job"
+        )
+
+    return {"deleted": deleted}
+    # 400 if applications exist (the database blocks it: RESTRICT)
 
 @router.get("/{job_id}/matching-workers")
 async def matching_workers(job_id: int, conn: Any = Depends(get_connection)):
