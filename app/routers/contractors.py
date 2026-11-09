@@ -144,24 +144,45 @@ async def update_contractor(
 
 
 # Only admins can delete contractor profiles
+
+# Only admins can delete contractor profiles
 @router.delete("/{contractor_id}", status_code=204)
 async def delete_contractor(
     contractor_id: int,
     con=Depends(get_connection),
     current_user=Depends(require_role("admin"))
 ):
-    try:
-        result = await con.execute(
-            "DELETE FROM contractor WHERE contractor_id = $1",
-            contractor_id
+    # Check whether contractor exists
+    contractor = await con.fetchrow(
+        "SELECT contractor_id FROM contractor WHERE contractor_id = $1",
+        contractor_id
+    )
+
+    if not contractor:
+        raise HTTPException(
+            status_code=404,
+            detail="Contractor not found"
         )
 
-    except asyncpg.PostgresError as e:
-        raise_http_error(e, "Contractor")
+    # Check whether contractor has existing jobs
+    job = await con.fetchrow(
+        "SELECT job_id FROM job WHERE contractor_id = $1 LIMIT 1",
+        contractor_id
+    )
 
-    if result == "DELETE 0":
-        raise HTTPException(404, "Contractor not found")
+    if job:
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot delete this contractor because they have existing jobs."
+        )
 
+    # Delete contractor if no jobs exist
+    await con.execute(
+        "DELETE FROM contractor WHERE contractor_id = $1",
+        contractor_id
+    )
+
+    return None
 
 # View jobs posted by a contractor
 @router.get("/{contractor_id}/jobs")

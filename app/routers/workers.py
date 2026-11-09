@@ -186,19 +186,46 @@ async def update_worker(
 
 
 # Only admins can delete worker profiles
+
+# Only admins can delete worker profiles
 @router.delete("/{worker_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_worker(
     worker_id: int,
     conn: Any = Depends(get_connection),
     current_user=Depends(require_role("admin"))
 ):
-    result = await conn.execute(
+    # First, check whether the worker exists
+    worker = await conn.fetchrow(
+        "SELECT worker_id FROM worker WHERE worker_id = $1",
+        worker_id
+    )
+
+    if not worker:
+        raise HTTPException(
+            status_code=404,
+            detail="Worker not found"
+        )
+
+    # Check whether the worker has existing applications
+    application = await conn.fetchrow(
+        "SELECT application_id FROM application WHERE worker_id = $1 LIMIT 1",
+        worker_id
+    )
+
+    if application:
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot delete this worker because they have existing applications."
+        )
+
+    # Delete the worker if no applications exist
+    await conn.execute(
         "DELETE FROM worker WHERE worker_id = $1",
         worker_id
     )
 
-    if result == "DELETE 0":
-        raise HTTPException(404, "Worker not found")
+    return None
+
 
 
 # Add a skill to own profile; admin can manage any worker
