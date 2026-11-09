@@ -3,26 +3,53 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from app.schemas.worker_schema import WorkerCreate, WorkerSkillCreate, WorkerUpdate
 from app.database.db import get_connection
 from app.errors import raise_http_from_db
+from app.security import require_role
 
 router = APIRouter(prefix="/workers", tags=["Workers"])
 
+
 @router.post("", status_code=status.HTTP_201_CREATED)
-async def create_worker(payload: WorkerCreate, conn: Any = Depends(get_connection)):
+async def create_worker(
+    payload: WorkerCreate,
+    conn: Any = Depends(get_connection),
+    current_user=Depends(require_role("worker"))
+):
+    # Check whether this account already has a worker profile
+    existing = await conn.fetchrow(
+        "SELECT worker_id FROM worker WHERE user_id = $1",
+        current_user["user_id"]
+    )
+
+    if existing:
+        raise HTTPException(
+            status_code=409,
+            detail="Your worker profile already exists"
+        )
+
     try:
         row = await conn.fetchrow(
             """
             INSERT INTO worker
-                (full_name, phone, email, city, experience_years, expected_daily_wage, is_available)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-            RETURNING worker_id, full_name, phone, email, city,
-                      experience_years, expected_daily_wage, is_available, created_at;
+                (user_id, full_name, phone, email, city,
+                 experience_years, expected_daily_wage, is_available)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING *;
             """,
-            payload.full_name, payload.phone, payload.email, payload.city,
-            payload.experience_years, payload.expected_daily_wage, payload.is_available,
+            current_user["user_id"],
+            payload.full_name,
+            payload.phone,
+            current_user["email"],
+            payload.city,
+            payload.experience_years,
+            payload.expected_daily_wage,
+            payload.is_available,
         )
+
         return dict(row)
+
     except Exception as e:
         raise_http_from_db(e, unique_msg="Phone or email already exists")
+
 
 
 @router.get("")

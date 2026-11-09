@@ -3,8 +3,8 @@ from datetime import date
 from typing import Literal
 
 # Pydantic request model for job creation
+
 class JobCreate(BaseModel):
-    contractor_id: int
     category_id: int
     title: str = Field(min_length=3, max_length=120)
     description: str | None = None
@@ -14,6 +14,7 @@ class JobCreate(BaseModel):
     workers_needed: int = Field(1, gt=0)
     start_date: date
     end_date: date
+
 
 # Pydantic request model for job updation
 class JobUpdate(BaseModel):

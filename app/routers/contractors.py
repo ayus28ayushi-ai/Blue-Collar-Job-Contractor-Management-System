@@ -3,20 +3,49 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.database.db import get_connection, as_dict, as_dicts
 from app.database.errors import raise_http_error
 from app.schemas.contractor_schema import ContractorIn
+from app.security import require_role
 
 router = APIRouter(prefix="/contractors", tags=["Contractors"])
 
+
 @router.post("/", status_code=201)
-async def create_contractor(data: ContractorIn, con=Depends(get_connection)):
+async def create_contractor(
+    data: ContractorIn,
+    con=Depends(get_connection),
+    current_user=Depends(require_role("contractor"))
+):
+    existing = await con.fetchrow(
+        "SELECT contractor_id FROM contractor WHERE user_id = $1",
+        current_user["user_id"]
+    )
+
+    if existing:
+        raise HTTPException(
+            status_code=409,
+            detail="Your contractor profile already exists"
+        )
+
     try:
         row = await con.fetchrow(
-            """INSERT INTO contractor (company_name, contact_person, phone, email, city)
-               VALUES ($1, $2, $3, $4, $5) RETURNING *""",
-            data.company_name, data.contact_person, data.phone, data.email, data.city,
+            """
+            INSERT INTO contractor
+                (user_id, company_name, contact_person, phone, email, city)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING *
+            """,
+            current_user["user_id"],
+            data.company_name,
+            data.contact_person,
+            data.phone,
+            current_user["email"],
+            data.city,
         )
+
     except asyncpg.PostgresError as e:
         raise_http_error(e, "Contractor with this phone or email")
+
     return as_dict(row)
+
 
 
 @router.get("/")

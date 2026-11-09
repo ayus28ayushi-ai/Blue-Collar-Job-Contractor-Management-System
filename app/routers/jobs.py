@@ -2,21 +2,52 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.database.db import get_connection, as_dicts, as_dict
 from app.schemas.job_schema import JobCreate, JobUpdate
 from typing import Any
+from app.security import require_role
 
 router = APIRouter(prefix="/jobs", tags=["Jobs"])
 
 # create jobs
+
 @router.post("", status_code=201)
-async def create_job(j: JobCreate, conn=Depends(get_connection)):
-    """Basic create (no skills). B replaces this with the transaction version that also
-    inserts the job_skill rows; both use the same URL, so keep only one of them."""
+async def create_job(
+    j: JobCreate,
+    conn=Depends(get_connection),
+    current_user=Depends(require_role("contractor"))
+):
+    contractor_id = await conn.fetchval(
+        "SELECT contractor_id FROM contractor WHERE user_id = $1",
+        current_user["user_id"]
+    )
+
+    if contractor_id is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Contractor profile not found"
+        )
+
     row = await conn.fetchrow(
-        """INSERT INTO job (contractor_id, category_id, title, description, location,
-                            pay_amount, pay_type, workers_needed, start_date, end_date)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *""",
-        j.contractor_id, j.category_id, j.title, j.description, j.location,
-        j.pay_amount, j.pay_type, j.workers_needed, j.start_date, j.end_date)
+        """
+        INSERT INTO job (
+            contractor_id, category_id, title, description, location,
+            pay_amount, pay_type, workers_needed, start_date, end_date
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        RETURNING *
+        """,
+        contractor_id,
+        j.category_id,
+        j.title,
+        j.description,
+        j.location,
+        j.pay_amount,
+        j.pay_type,
+        j.workers_needed,
+        j.start_date,
+        j.end_date
+    )
+
     return as_dict(row)
+
 
 # router to search jobs
 @router.get("/search")
