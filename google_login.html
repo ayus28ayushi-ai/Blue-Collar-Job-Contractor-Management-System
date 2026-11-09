@@ -1,0 +1,98 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Google Login Test</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 500px;
+            margin: 80px auto;
+            text-align: center;
+        }
+
+        select, button {
+            padding: 10px;
+            margin: 12px;
+        }
+
+        #result {
+            margin-top: 20px;
+            text-align: left;
+            overflow-wrap: anywhere;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Blue Collar Job Portal</h2>
+    <p>Sign in using your Google account</p>
+
+    <label for="role">Choose your role (new users only):</label>
+    <br>
+
+    <select id="role">
+        <option value="worker">Worker</option>
+        <option value="contractor">Contractor</option>
+    </select>
+
+    <div id="g_id_onload"
+         data-client_id="221209498754-01ut7qjp5hd3e5gpht4f1qsl7tek38vb.apps.googleusercontent.com"
+         data-callback="handleGoogleLogin">
+    </div>
+
+    <div class="g_id_signin"
+         data-type="standard"
+         data-size="large"
+         data-theme="outline"
+         data-text="signin_with"
+         data-shape="rectangular">
+    </div>
+
+    <div id="result"></div>
+
+    <script>
+        async function handleGoogleLogin(response) {
+            const result = document.getElementById("result");
+
+            result.innerText = "Verifying Google account...";
+
+            try {
+                const apiResponse = await fetch("/auth/google", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        credential: response.credential,
+                        role: document.getElementById("role").value
+                    })
+                });
+
+                const data = await apiResponse.json();
+
+                if (!apiResponse.ok) {
+                    result.innerText = "Error: " +
+                        (data.detail || "Google login failed");
+                    return;
+                }
+
+                result.innerHTML = `
+                    <h3>Login Successful!</h3>
+                    <p><b>Email:</b> ${data.user.email}</p>
+                    <p><b>Role:</b> ${data.user.role}</p>
+                    <p><b>User ID:</b> ${data.user.user_id}</p>
+                    <p><b>Access Token:</b></p>
+                    <textarea rows="5" style="width:100%">${data.access_token}</textarea>
+                `;
+
+            } catch (error) {
+                result.innerText = "Could not connect to the backend.";
+                console.error(error);
+            }
+        }
+    </script>
+
+</body>
+</html>

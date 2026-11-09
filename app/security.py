@@ -23,7 +23,9 @@ def verify_password(password: str, hashed_password: str) -> bool:
 
 
 # JWT authentication
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+from fastapi.security import HTTPBearer
+
+oauth2_scheme = HTTPBearer()
 
 
 def create_access_token(user_id: int, role: str) -> str:
@@ -49,9 +51,10 @@ def create_access_token(user_id: int, role: str) -> str:
 
 # Verify token and identify the current user
 async def get_current_user(
-    token: str = Depends(oauth2_scheme),
+    credentials = Depends(oauth2_scheme),     
     connection=Depends(get_connection)
 ):
+    token = credentials.credentials
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Invalid or expired authentication token",

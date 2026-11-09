@@ -1,7 +1,9 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends 
 from contextlib import asynccontextmanager
 from app.database.db import get_connection, create_pool
 from app.routers import applications , jobs, auth, categories, contractors, job_posting, payments, ratings, skills, workers
+from pathlib import Path
+from fastapi.responses import HTMLResponse
 
 
 # initialising and closing database connections as the app starts and stops
@@ -37,4 +39,12 @@ async def root(connection=Depends(get_connection)):
         "db": row["db"],
         "postgres": row["pg"].split(",")[0]
     }
+
+@app.get("/google-test", response_class=HTMLResponse)
+async def google_test():
+    html_path = Path(__file__).resolve().parent.parent / "google_login.html"
+
+    html = html_path.read_text(encoding="utf-8")
+
+    return HTMLResponse(content=html)
 
