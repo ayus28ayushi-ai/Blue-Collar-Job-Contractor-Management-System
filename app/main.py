@@ -4,6 +4,7 @@ from app.database.db import get_connection, create_pool
 from app.routers import applications , jobs, auth, categories, contractors, job_posting, payments, ratings, skills, workers
 from pathlib import Path
 from fastapi.responses import HTMLResponse
+from app.security import require_role
 
 
 # initialising and closing database connections as the app starts and stops
@@ -32,8 +33,14 @@ app.include_router(workers.router)
 
 # simple check endpoint to verify db connectivity
 @app.get("/systemcheck", tags=["System"])
-async def root(connection=Depends(get_connection)):
-    row = await connection.fetchrow("SELECT current_database() AS db, version() AS pg")
+async def root(
+    connection=Depends(get_connection),
+    current_user=Depends(require_role("admin"))
+):
+    row = await connection.fetchrow(
+        "SELECT current_database() AS db, version() AS pg"
+    )
+
     return {
         "status": "ok",
         "db": row["db"],
