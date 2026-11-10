@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends 
 from contextlib import asynccontextmanager
 from app.database.db import get_connection, create_pool
-from app.routers import applications , jobs, auth, categories, contractors, job_posting, payments, ratings, skills, workers
+from app.routers import applications , jobs, auth, categories, contractors, job_posting, payments, ratings, skills, workers, analytics
 from pathlib import Path
 from fastapi.responses import HTMLResponse
 from app.security import require_role
@@ -30,6 +30,7 @@ app.include_router(payments.router)
 app.include_router(ratings.router)
 app.include_router(skills.router)
 app.include_router(workers.router)
+app.include_router(analytics.router)
 
 # simple check endpoint to verify db connectivity
 @app.get("/systemcheck", tags=["System"])
