@@ -2,7 +2,8 @@
 CREATE TABLE IF NOT EXISTS worker (
     worker_id SERIAL PRIMARY KEY,
     full_name VARCHAR(100) NOT NULL,
-    phone VARCHAR(15) NOT NULL UNIQUE,
+    phone VARCHAR(10) NOT NULL UNIQUE
+    CHECK (phone ~ '^[0-9]{10}$') ,
     email VARCHAR(100) UNIQUE,
     city VARCHAR(60) NOT NULL,
     experience_years INT NOT NULL DEFAULT 0 CHECK (experience_years >= 0),
@@ -32,7 +33,8 @@ CREATE TABLE contractor (
     contractor_id SERIAL PRIMARY KEY,
     company_name VARCHAR(100) NOT NULL,
     contact_person VARCHAR(100) NOT NULL,
-    phone VARCHAR(15) NOT NULL UNIQUE,
+    phone VARCHAR(10) NOT NULL UNIQUE
+    CHECK (phone ~ '^[0-9]{10}$'),
     email VARCHAR(100) NOT NULL UNIQUE,
     city VARCHAR(60)  NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
