@@ -25,7 +25,7 @@ def generate_sql():
         company = fake.company().replace("'", "''")
         name = fake.name().replace("'", "''")
         email = fake.company_email()
-        phone = fake.msisdn()[:15]
+        phone = fake.msisdn()[:10]
         city = fake.city().replace("'", "''")
         sql_lines.append(f"INSERT INTO contractor (company_name, contact_person, phone, email, city) VALUES ('{company}', '{name}', '{phone}', '{email}', '{city}');")
 
@@ -34,7 +34,7 @@ def generate_sql():
     for _ in range(num_workers):
         name = fake.name().replace("'", "''")
         email = fake.email()
-        phone = fake.msisdn()[:15]
+        phone = fake.msisdn()[:10]
         exp = random.randint(1, 15)
         city = fake.city().replace("'", "''")
         wage = random.choice([800, 1000, 1200, 1500, 1800, 2000])
