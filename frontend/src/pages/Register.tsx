@@ -1,10 +1,10 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { Wrench, Users, Building2 } from "lucide-react";
-import { register as registerReq, api } from "@/lib/api";
+import { Wrench, Users, Building2, Sun, Moon } from "lucide-react";
+import { register as registerReq, api, ApiError, tokenStore } from "@/lib/api";
 import { useAuth } from "@/hooks/auth";
-import { ApiError } from "@/lib/api";
+import { useTheme } from "@/hooks/theme";
 import type { Role } from "@/types";
 
 declare global {
@@ -29,6 +29,7 @@ export default function Register() {
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
   const { signIn } = useAuth();
+  const { theme, toggle } = useTheme();
   const navigate = useNavigate();
 
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
@@ -53,8 +54,6 @@ export default function Register() {
               json: { credential: resp.credential, role },
               auth: false,
             });
-            // Use the same storage path as password login
-            const { tokenStore } = await import("@/lib/api");
             tokenStore.set(data.access_token);
             localStorage.setItem("worksite.user", JSON.stringify(data.user));
             window.location.href = "/jobs";
@@ -67,8 +66,9 @@ export default function Register() {
       });
       const el = document.getElementById("google-btn-register");
       if (el) {
+        el.innerHTML = "";
         window.google.accounts.id.renderButton(el, {
-          theme: "outline",
+          theme: theme === "dark" ? "filled_black" : "outline",
           size: "large",
           width: 320,
           text: "signup_with",
@@ -79,7 +79,7 @@ export default function Register() {
     return () => {
       script.remove();
     };
-  }, [clientId, role]);
+  }, [clientId, role, theme]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -104,32 +104,47 @@ export default function Register() {
     }
   }
 
+  const field =
+    "h-10 w-full rounded-lg border border-zinc-300 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500";
+
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-50">
-      <header className="border-b border-zinc-200 bg-white">
-        <div className="mx-auto flex h-14 max-w-lg items-center px-4">
-          <Link to="/" className="flex items-center gap-2 text-sm font-semibold">
+    <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-[#09090B]">
+      <header className="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-[#111113]">
+        <div className="mx-auto flex h-14 max-w-lg items-center justify-between px-4">
+          <Link to="/" className="flex items-center gap-2 text-sm font-semibold text-zinc-900 dark:text-zinc-50">
             <div className="flex size-7 items-center justify-center rounded-md bg-accent text-white">
               <Wrench className="size-3.5" />
             </div>
             Worksite
           </Link>
+          <button
+            onClick={toggle}
+            aria-label="Toggle theme"
+            className="rounded-lg p-2 text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+          >
+            {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+          </button>
         </div>
       </header>
 
       <main className="flex flex-1 items-center justify-center px-4 py-10">
         <div className="w-full max-w-md">
-          <div className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
-            <h1 className="text-xl font-semibold tracking-tight">Create your account</h1>
-            <p className="mt-1 text-sm text-zinc-500">Join as a worker or contractor</p>
+          <div className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <h1 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+              Create your account
+            </h1>
+            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+              Join as a worker or contractor
+            </p>
 
-            {/* Role selector */}
-            <div className="mt-6 grid grid-cols-2 gap-2 rounded-xl bg-zinc-100 p-1">
+            <div className="mt-6 grid grid-cols-2 gap-2 rounded-xl bg-zinc-100 p-1 dark:bg-zinc-800">
               <button
                 type="button"
                 onClick={() => setRole("worker")}
                 className={`flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition ${
-                  role === "worker" ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-600 hover:text-zinc-900"
+                  role === "worker"
+                    ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-950 dark:text-zinc-50"
+                    : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
                 }`}
               >
                 <Users className="size-4" /> Worker
@@ -138,7 +153,9 @@ export default function Register() {
                 type="button"
                 onClick={() => setRole("contractor")}
                 className={`flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition ${
-                  role === "contractor" ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-600 hover:text-zinc-900"
+                  role === "contractor"
+                    ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-950 dark:text-zinc-50"
+                    : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
                 }`}
               >
                 <Building2 className="size-4" /> Contractor
@@ -147,36 +164,42 @@ export default function Register() {
 
             <form onSubmit={onSubmit} className="mt-6 space-y-4">
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-zinc-700">Email</label>
+                <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  Email
+                </label>
                 <input
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="h-10 w-full rounded-lg border border-zinc-300 px-3 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+                  className={field}
                   placeholder="you@example.com"
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-zinc-700">Password</label>
+                <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  Password
+                </label>
                 <input
                   type="password"
                   required
                   minLength={8}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-10 w-full rounded-lg border border-zinc-300 px-3 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+                  className={field}
                   placeholder="At least 8 characters"
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-zinc-700">Confirm password</label>
+                <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  Confirm password
+                </label>
                 <input
                   type="password"
                   required
                   value={confirm}
                   onChange={(e) => setConfirm(e.target.value)}
-                  className="h-10 w-full rounded-lg border border-zinc-300 px-3 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+                  className={field}
                 />
               </div>
               <button
@@ -191,27 +214,28 @@ export default function Register() {
             {clientId && (
               <>
                 <div className="my-6 flex items-center gap-3">
-                  <div className="h-px flex-1 bg-zinc-200" />
+                  <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-700" />
                   <span className="text-xs text-zinc-400">or</span>
-                  <div className="h-px flex-1 bg-zinc-200" />
+                  <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-700" />
                 </div>
                 <div className="flex justify-center">
                   <div id="google-btn-register" />
                 </div>
-                <p className="mt-2 text-center text-xs text-zinc-500">
+                <p className="mt-2 text-center text-xs text-zinc-500 dark:text-zinc-400">
                   Google sign-up will create a {role} account
                 </p>
               </>
             )}
 
             {!clientId && (
-              <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                Google Sign-In is not configured. Set <code className="font-mono">VITE_GOOGLE_CLIENT_ID</code> and backend{" "}
+              <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                Google Sign-In is not configured. Set{" "}
+                <code className="font-mono">VITE_GOOGLE_CLIENT_ID</code> and backend{" "}
                 <code className="font-mono">GOOGLE_CLIENT_ID</code>.
               </p>
             )}
 
-            <p className="mt-6 text-center text-sm text-zinc-500">
+            <p className="mt-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
               Already have an account?{" "}
               <Link to="/login" className="font-medium text-accent hover:underline">
                 Sign in

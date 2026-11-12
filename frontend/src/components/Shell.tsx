@@ -1,7 +1,11 @@
 import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
-import { BarChart3, Briefcase, ClipboardList, LogOut, Menu, Users, X, UserCircle, Shield } from "lucide-react";
+import {
+  BarChart3, Briefcase, ClipboardList, LogOut, Menu, Users, X,
+  UserCircle, Shield, Sun, Moon,
+} from "lucide-react";
 import { useAuth } from "@/hooks/auth";
+import { useTheme } from "@/hooks/theme";
 import { cn } from "@/lib/utils";
 import type { Role } from "@/types";
 
@@ -16,7 +20,9 @@ const NAV: { to: string; label: string; icon: typeof Briefcase; roles: Role[] }[
 
 export default function Shell() {
   const { user, signOut } = useAuth();
+  const { theme, toggle } = useTheme();
   const [open, setOpen] = useState(false);
+
   const links = (
     <nav className="flex-1 space-y-0.5 p-3">
       {NAV.filter((n) => user && n.roles.includes(user.role)).map(({ to, label, icon: I }) => (
@@ -26,32 +32,46 @@ export default function Shell() {
           onClick={() => setOpen(false)}
           className={({ isActive }) =>
             cn(
-              "flex h-8 items-center gap-2.5 rounded-md px-2.5 text-sm text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800",
-              isActive && "bg-zinc-100 font-medium text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100 [&>svg]:text-accent"
+              "flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-sm text-zinc-600 transition-colors hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800/80",
+              isActive &&
+                "bg-zinc-100 font-medium text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50 [&>svg]:text-accent"
             )
           }
         >
-          <I className="size-4" />
+          <I className="size-4 shrink-0" />
           {label}
         </NavLink>
       ))}
     </nav>
   );
+
   const side = (
     <div className="flex h-full flex-col">
-      <div className="flex h-14 items-center gap-2 px-5 text-sm font-semibold tracking-tight">
-        <div className="flex size-6 items-center justify-center rounded bg-accent text-white">
+      <div className="flex h-14 items-center gap-2.5 px-5">
+        <div className="flex size-7 items-center justify-center rounded-lg bg-accent text-white">
           <Briefcase className="size-3.5" />
         </div>
-        Worksite
+        <span className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+          Worksite
+        </span>
       </div>
       {links}
-      <div className="border-t border-zinc-200 p-3 dark:border-zinc-800">
-        <p className="truncate px-2.5 text-xs text-zinc-500">{user?.email}</p>
-        <p className="px-2.5 font-mono text-xs capitalize text-zinc-400">{user?.role}</p>
+      <div className="space-y-1 border-t border-zinc-200 p-3 dark:border-zinc-800">
+        <button
+          onClick={toggle}
+          className="flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-sm text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800/80"
+          aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+        >
+          {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+          {theme === "dark" ? "Light mode" : "Dark mode"}
+        </button>
+        <div className="px-2.5 pt-1">
+          <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">{user?.email}</p>
+          <p className="font-mono text-xs capitalize text-zinc-400 dark:text-zinc-500">{user?.role}</p>
+        </div>
         <button
           onClick={signOut}
-          className="mt-2 flex h-8 w-full items-center gap-2.5 rounded-md px-2.5 text-sm text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+          className="flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-sm text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800/80"
         >
           <LogOut className="size-4" />
           Sign out
@@ -59,25 +79,41 @@ export default function Shell() {
       </div>
     </div>
   );
+
   return (
-    <div className="min-h-screen lg:grid lg:grid-cols-[220px_1fr]">
-      <aside className="sticky top-0 hidden h-screen border-r border-zinc-200 bg-white lg:block dark:border-zinc-800 dark:bg-[#111113]">
+    <div className="min-h-screen bg-zinc-50 dark:bg-[#09090B] lg:grid lg:grid-cols-[240px_1fr]">
+      <aside className="sticky top-0 hidden h-screen border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-[#111113] lg:block">
         {side}
       </aside>
-      <header className="flex h-12 items-center border-b border-zinc-200 bg-white px-3 lg:hidden dark:border-zinc-800 dark:bg-[#111113]">
-        <button aria-label="Open menu" onClick={() => setOpen(true)} className="rounded p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800">
-          <Menu className="size-5" />
+      <header className="flex h-12 items-center justify-between border-b border-zinc-200 bg-white px-3 dark:border-zinc-800 dark:bg-[#111113] lg:hidden">
+        <div className="flex items-center">
+          <button
+            aria-label="Open menu"
+            onClick={() => setOpen(true)}
+            className="rounded-lg p-1.5 text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            <Menu className="size-5" />
+          </button>
+          <span className="ml-2 text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            Worksite
+          </span>
+        </div>
+        <button
+          onClick={toggle}
+          aria-label="Toggle theme"
+          className="rounded-lg p-1.5 text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+        >
+          {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
         </button>
-        <span className="ml-2 text-sm font-semibold tracking-tight">Worksite</span>
       </header>
       {open && (
         <div className="fixed inset-0 z-30 lg:hidden">
-          <div className="absolute inset-0 bg-zinc-950/30" onClick={() => setOpen(false)} />
-          <div className="absolute inset-y-0 left-0 w-64 bg-white dark:bg-[#111113]">
+          <div className="absolute inset-0 bg-zinc-950/40" onClick={() => setOpen(false)} />
+          <div className="absolute inset-y-0 left-0 w-64 border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-[#111113]">
             <button
               aria-label="Close menu"
               onClick={() => setOpen(false)}
-              className="absolute right-3 top-3 rounded p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              className="absolute right-3 top-3 rounded-lg p-1 text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
             >
               <X className="size-4" />
             </button>
