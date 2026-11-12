@@ -1,0 +1,5 @@
+@tailwind base; @tailwind components; @tailwind utilities;
+body { @apply bg-zinc-50 text-zinc-900 antialiased dark:bg-[#09090B] dark:text-zinc-100; font-feature-settings: "cv11","ss01"; }
+.skeleton { @apply relative overflow-hidden rounded bg-zinc-200/70 dark:bg-zinc-800; }
+.skeleton::after { content:""; @apply absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/50 to-transparent dark:via-white/5; animation: shimmer 1.4s infinite; }
+@media (prefers-reduced-motion: reduce) { .skeleton::after, .animate-slidein { animation: none; } }
