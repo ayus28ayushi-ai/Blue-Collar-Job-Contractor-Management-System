@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Star } from "lucide-react";
-import { useAuth } from "@/hooks/auth";
-import { errMsg, getWorkerId, setWorkerId, useMyApplications, useRate, useWithdraw } from "@/hooks/queries";
-import { Button, EmptyState, ErrorBanner, Input, Mono, RowSkeletons, StatusBadge } from "@/components/ui";
+import { errMsg, useMyApplications, useMyWorkerId, useRate, useWithdraw } from "@/hooks/queries";
+import { Button, EmptyState, ErrorBanner, Mono, RowSkeletons, StatusBadge } from "@/components/ui";
 import { ProfileSetup } from "@/components/Profile";
 import { fmtDate, inr } from "@/lib/utils";
 import type { MyApplication } from "@/types";
@@ -21,27 +20,13 @@ function RateInline({ a }: { a: MyApplication }) {
 }
 
 export default function Applications() {
-  const { user } = useAuth();
-  const [wid, setWid] = useState<number | null>(() => getWorkerId(user!.user_id));
-  const [manual, setManual] = useState(""); const [hasProfile, setHasProfile] = useState(false);
+  const me = useMyWorkerId();
+  const wid = me.workerId ?? null;
   const q = useMyApplications(wid); const withdraw = useWithdraw(wid);
 
-  // No "me" endpoint exists for workers, so offer a way back in if local storage was cleared.
-  if (wid === null) {
-    return hasProfile ? (
-      <form className="mx-auto max-w-sm space-y-3 py-10" onSubmit={(e) => { e.preventDefault(); const n = Number(manual); if (n > 0) { setWorkerId(user!.user_id, n); setWid(n); } }}>
-        <h1 className="text-lg font-semibold tracking-tight">Find your profile</h1>
-        <p className="text-sm text-zinc-500">This device doesn't remember your worker ID. Enter it to see your applications.</p>
-        <Input type="number" min={1} required value={manual} onChange={(e) => setManual(e.target.value)} aria-label="Worker ID" className="font-mono" />
-        <div className="flex gap-2"><Button type="submit" variant="primary">Continue</Button><Button type="button" onClick={() => setHasProfile(false)}>Create a new profile</Button></div>
-      </form>
-    ) : (
-      <div>
-        <ProfileSetup kind="worker" onCreated={setWid} />
-        <p className="mx-auto max-w-sm text-center text-xs text-zinc-500">Already have a profile?{" "}
-          <button className="underline" onClick={() => setHasProfile(true)}>Enter your worker ID</button></p>
-      </div>);
-  }
+  if (me.isLoading) return <div className="mx-auto max-w-5xl rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-[#111113]"><RowSkeletons rows={3} /></div>;
+  if (me.isError) return <ErrorBanner message={errMsg(me.error)} onRetry={() => me.refetch()} />;
+  if (wid === null) return <ProfileSetup kind="worker" />; // /auth/me says this worker has no profile row yet
   return (
     <div className="mx-auto max-w-5xl">
       <h1 className="text-xl font-semibold tracking-tight">My applications</h1>

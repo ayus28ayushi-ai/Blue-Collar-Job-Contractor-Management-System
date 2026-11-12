@@ -1,7 +1,8 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Check, X } from "lucide-react";
 import { useAuth } from "@/hooks/auth";
-import { errMsg, useApplicants, useApply, useJob, useJobStatus, useMyContractor, usePay, useSetApplicationStatus } from "@/hooks/queries";
+import { errMsg, useApplicants, useApply, useJob, useJobStatus, useMe, useMyContractor, usePay, useSetApplicationStatus } from "@/hooks/queries";
 import { Button, ErrorBanner, Select, Input, Sheet, Skeleton, StatusBadge, Mono, EmptyState } from "@/components/ui";
 import { fmtDate, inr } from "@/lib/utils";
 import type { JobApplicant } from "@/types";
@@ -45,13 +46,17 @@ function Applicants({ jobId, pay }: { jobId: number; pay: number }) {
 }
 
 export function JobSheet({ id, onClose }: { id: number | null; onClose: () => void }) {
-  const { user } = useAuth(); const q = useJob(id); const me = useMyContractor(); const apply = useApply(); const status = useJobStatus();
+  const { user } = useAuth(); const q = useJob(id); const me = useMyContractor(); const apply = useApply(); const status = useJobStatus(); const meQ = useMe();
   const j = q.data; const owns = !!j && user?.role === "contractor" && me.data?.contractor_id === j.contractorId;
   const canSeeApplicants = owns || user?.role === "admin";
   const row = (k: string, v: React.ReactNode) => <div className="flex justify-between gap-4 py-2 text-sm"><dt className="text-zinc-500">{k}</dt><dd className="text-right">{v}</dd></div>;
   return (
     <Sheet open={id !== null} onClose={onClose} title={j?.title ?? "Job"}
-      footer={j && user?.role === "worker" && j.status === "open" ? <Button variant="primary" className="w-full" loading={apply.isPending} onClick={() => apply.mutate(j.id)}>Apply for this job</Button> : undefined}>
+      footer={j && user?.role === "worker" && j.status === "open" ? (
+        meQ.data && meQ.data.worker_id === null
+          ? <p className="text-center text-sm text-zinc-500">Create your <Link to="/applications" className="underline">worker profile</Link> before applying.</p>
+          : <Button variant="primary" className="w-full" loading={apply.isPending} disabled={meQ.isLoading} onClick={() => apply.mutate(j.id)}>Apply for this job</Button>
+      ) : undefined}>
       {q.isLoading && <div className="space-y-3"><Skeleton className="w-2/3" /><Skeleton className="h-24 w-full" /></div>}
       {q.isError && <ErrorBanner message={errMsg(q.error)} onRetry={() => q.refetch()} />}
       {j && (

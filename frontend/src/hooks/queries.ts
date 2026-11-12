@@ -13,48 +13,35 @@ export const useCategories = () => useQuery({ queryKey: ["categories"], staleTim
 export const useSkills = () => useQuery({ queryKey: ["skills"], staleTime: 5 * 60_000, queryFn: () => api<T.Skill[]>("/skills") });
 
 // ---------- profiles ----------
-// The API has no "me" endpoint, so a contractor is found by matching their login email in GET /contractors.
-// export function useMyContractor() {
-//   const { user } = useAuth();
-//   return useQuery({
-//     queryKey: ["my-contractor", user?.user_id], enabled: user?.role === "contractor",
-//     queryFn: async () => (await api<T.Contractor[]>("/contractors/")).find((c) => c.email.toLowerCase() === user!.email.toLowerCase()) ?? null,
-//   });
-// }
-
+// GET /auth/me returns the logged-in user plus their worker_id / contractor_id (null until a profile exists).
+export interface Me { user_id: number; email: string; role: T.Role; worker_id: number | null; contractor_id: number | null }
+export const useMe = () => {
+  const { user } = useAuth();
+  return useQuery({ queryKey: ["me", user?.user_id], enabled: !!user, staleTime: 60_000, queryFn: () => api<Me>("/auth/me") });
+};
+/** data: undefined while loading, null when the contractor has no company profile yet, else { contractor_id }. */
 export function useMyContractor() {
-  const me = useMe();
-
-  return {
-    ...me,
-
-    data: me.data
-      ? me.data.contractor_id === null
-        ? null
-        : {
-          contractor_id: me.data.contractor_id
-        }
-      : undefined,
-  };
+  const q = useMe();
+  return { ...q, data: q.data ? (q.data.contractor_id === null ? null : { contractor_id: q.data.contractor_id }) : undefined };
 }
-
-// A worker can't list workers, so the id returned by POST /workers is remembered locally.
-const wKey = (uid: number) => `worksite.worker.${uid}`;
-export const getWorkerId = (uid: number) => { try { const v = localStorage.getItem(wKey(uid)); return v ? Number(v) : null; } catch { return null; } };
-export const setWorkerId = (uid: number, id: number) => { try { localStorage.setItem(wKey(uid), String(id)); } catch { /* */ } };
+/** Same idea for workers. */
+export const useMyWorkerId = () => {
+  const q = useMe();
+  return { ...q, workerId: q.data ? q.data.worker_id : undefined };
+};
 
 export function useCreateContractor() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (b: Omit<T.Contractor, "contractor_id">) => api<T.Contractor>("/contractors/", { method: "POST", json: b }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["my-contractor"] }); toast.success("Company profile created"); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["me"] }); toast.success("Company profile created"); },
   });
 }
 export function useCreateWorker() {
-  const { user } = useAuth(); const qc = useQueryClient();
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: (b: T.WorkerInput) => api<T.Worker>("/workers", { method: "POST", json: b }),
-    onSuccess: (w) => { setWorkerId(user!.user_id, w.worker_id); qc.invalidateQueries(); toast.success("Profile created"); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["me"] }); toast.success("Profile created"); },
   });
 }
 
@@ -172,13 +159,3 @@ export const useAnalytics = () => {
     ratings: q<T.WorkerRating[]>("ratings", "/analytics/worker-rating-summary"),
   };
 };
-
-
-export interface Me {
-  user_id: number;
-  email: string;
-  role: T.Role;
-  worker_id: number | null;
-  contractor_id: number | null;
-}
-
