@@ -42,7 +42,7 @@ Thumbs.db
 google_login.html
 
 # Frontend (React + Vite)
-frontend/node_modules/*
+frontend/node_modules/
 frontend/.vite/*
 *.tsbuildinfo
 npm-debug.log*
